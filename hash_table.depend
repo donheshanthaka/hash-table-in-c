@@ -1,5 +1,8 @@
 # depslib dependency file v1.0
-1641487524 source:d:\projects\c\basics\hash_table\main.c
+1641586098 source:d:\projects\c\basics\hash_table\main.c
 	<stdio.h>
 	<stdlib.h>
+	<string.h>
+	<stdint.h>
+	<stdbool.h>
 

@@ -6,15 +6,16 @@
 
 #define MAX_key 256 // maximum size of key allowed in bytes
 #define TABLE_SIZE 10
-#define DELETED_NODE (data*)(0xFFFFFFFFFFFFFFFFUL)
+//#define DELETED_NODE (data*)(0xFFFFFFFFFFFFFFFFUL)
 
 
-// open addressing
+//separate chaining
 
 // creating the struct of type data
-typedef struct {
+typedef struct data{
     char key[MAX_key];
     int value;
+    struct data *next;
 } data;
 
 data *hash_table[TABLE_SIZE]; // an array of pointers of type struct data [the array size is 10]
@@ -44,11 +45,15 @@ void print_table(){
     for (int i=0; i < TABLE_SIZE; i++){ // the loop goes through the table
         if(hash_table[i] == NULL){  // if the element is empty
             printf("\t%i\t\t---\n", i);
-        }else if (hash_table[i] == DELETED_NODE){ // if its a deleted location in the hash table that was used previously
-            printf("\t%i\t\t<deleted>\n", i);
         }else{ // prints the key, value pair
-            printf("\t%i\t\t%s",i, hash_table[i]->key);
-            printf("\t\t%d\n", hash_table[i]->value);
+            printf("\t%i\t", i);
+            data *temp = hash_table[i];
+            while (temp != NULL){
+                printf("\t%s -", temp->key);
+                printf("\t%d\n", temp->value);
+                temp = temp->next;
+            }
+            printf("\n");
         }
     }
 }
@@ -57,58 +62,38 @@ void print_table(){
 bool insert(data *p){
     if(p == NULL) return NULL; // if the given element is null
     int index = hash(p->key); // the hash value is returned by the hash_function for the given string of the element
-    for (int i=0; i < TABLE_SIZE; i++){ // the loop will run upt to the size of the table
-        /*
-        since open addressing is used, the hash value is being incremented by 1 as the loop goes
-        at the first iteration the value will be (hash_value + 0) % table_size, there for it will check the original hash position to see if it is
-        null or a previous node but now that has been emptied, if either is true it will added the element there, if not
-        it will check go to the second iteration (hash_value + 1) % table_size, so that it will iterate over the given size but wouldn't go above
-        */
-        int try = (i + index) % TABLE_SIZE;
-        if(hash_table[try] == NULL || hash_table[try] == DELETED_NODE){
-            hash_table[try] = p;
-            return true;
-        }
-    }
-    return false;
+    p->next = hash_table[index];
+    hash_table[index] = p;
+    return true;
 }
 
 // this function find an element by its key value
 data *search(char *key){
     int index = hash(key); // generate the hash value based on the key
-    for (int i = 0; i < TABLE_SIZE; i++){ // loop through the table
-        int try = (index + i) % TABLE_SIZE; // the same algorithm is used as in the insert function
-        // if the first hash value is null then its obvious that a key of similar hash value cannot be at another location, thereofore null is returned
-        if (hash_table[try] == NULL){
-            return false;
-        }
-        // if the selected hash_value index has been deleted, there is a possibility that more elements were added after, therefore the loop continues
-        if(hash_table[try] == DELETED_NODE) continue;
-        // if the selected key is matching then the pointer to that node is returned
-        if(strncmp(hash_table[index]->key, key, TABLE_SIZE) == 0){
-            return hash_table[try];
-        }
+    data *temp = hash_table[index];
+    while(temp != NULL && strncmp(temp->key, key, MAX_key) != 0){
+        temp = temp->next;
     }
-    return NULL;
+    return temp;
 }
 
 // The function deletes an element based on the key value
 data *deleteItem(char *key){
     int index = hash(key); // generate the hash value
-    for (int  i = 0; i < TABLE_SIZE; i++){
-        int try = (index + i) % TABLE_SIZE; // the same algorithm is used as in the insert function
-        // if the first hash value is null then its obvious that a key of similar hash value cannot be at another location, thereofore null is returned
-        if (hash_table[try] == NULL) return NULL;
-        // if the selected hash_value index has been deleted, there is a possibility that more elements were added after, therefore the loop continues
-        if (hash_table[try] == DELETED_NODE) continue;
-        // if the selected key is matching then, the that node or index is assigned as a DELETED_NODE
-        if(strncmp(hash_table[try]->key, key, TABLE_SIZE) == 0){
-            data *tmp = hash_table[try];
-            hash_table[try] = DELETED_NODE;
-            return tmp;
-        }
+    data *temp = hash_table[index];
+    data *previous = NULL;
+    while(temp != NULL && strncmp(temp->key, key, MAX_key) != 0){
+        previous = temp;
+        temp = temp->next;
     }
-    return NULL;
+    if(temp == NULL) return NULL;
+    if(previous == NULL){
+        // delete the head
+        hash_table[index] = temp->next;
+    }else{
+        previous->next = temp->next;
+    }
+    return temp;
 }
 
 int main()
